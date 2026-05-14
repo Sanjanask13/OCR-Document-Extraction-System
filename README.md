@@ -211,4 +211,7 @@ Downloads the generated output file.
 
 ## Author
 
-Built as an OCR document extraction project using Flask and Python.
+Sanjana S Kadakabhavi
+
+LinkedIn: https://linkedin.com/in/sanjana-kadakabhavi-8741bb25b
+GitHub: https://github.com/Sanjanask13
