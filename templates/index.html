@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OCR Application</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>Upload and Convert Your Document</h1>
+
+        <!-- Step 1: Upload Section -->
+        <form id="upload-form">
+            <div class="upload-section">
+                <label style="font-style: italic; font-size: 20px;" for="file">Choose an image to upload:</label>
+                <input type="file" id="file" name="file" accept="image/*" required>
+            </div>
+            <br>
+            <!-- Step 2: Show Preview Button -->
+            <button type="button" id="preview-button" class="convert-button">Show Preview</button>
+            <br><br>
+            <!-- Step 3: Image Preview Section -->
+            <div id="image-preview" class="hidden">
+                <img id="preview-img" src="" style="max-width: 100%; height: auto; border: 1px solid #ccc; margin-top: 10px;">
+            </div>
+            <br>
+            <!-- Step 4: Extract Text Button -->
+            <button type="button" id="extract-text-button" class="convert-button">Extract Text</button>
+            <br><br>
+        </form>
+
+        <!-- Step 5: Review Extracted Text -->
+        <div id="review-section" class="hidden">
+            <h2 style="font-style: italic; font-size: 20px;">Review Extracted Text</h2>
+            <textarea id="extracted-text" rows="10" style="width: 100%;"></textarea><br><br>
+            <!-- Step 6: File Type Selection -->
+            <label for="file-type">Select Output Format:</label><br><br>
+            <select id="file-type">
+                <option value="docx">Word Document (.docx)</option>
+                <option value="txt">Plain Text (.txt)</option>
+                <option value="pdf">PDF (.pdf)</option>
+            </select>
+            <br><br><br>
+            <!-- Step 7: Download Button -->
+            <button id="download-button" class="convert-button">Download</button>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const fileInput = document.getElementById('file');
+            const previewButton = document.getElementById('preview-button');
+            const previewImg = document.getElementById('preview-img');
+            const previewSection = document.getElementById('image-preview');
+            const extractTextButton = document.getElementById('extract-text-button');
+            const extractedTextArea = document.getElementById('extracted-text');
+            const reviewSection = document.getElementById('review-section');
+            const downloadButton = document.getElementById('download-button');
+            const fileTypeSelector = document.getElementById('file-type');
+            let imagePath = ''; // Variable to store the image path for finalization
+
+            // Show Preview Button Logic
+            previewButton.addEventListener('click', function () {
+                if (fileInput.files.length === 0) {
+                    alert('Please select an image file first.');
+                    return;
+                }
+
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    previewImg.src = e.target.result;
+                    previewSection.classList.remove('hidden'); // Show preview section
+                };
+
+                reader.readAsDataURL(fileInput.files[0]);
+            });
+
+            // Extract Text Button Logic
+            extractTextButton.addEventListener('click', function () {
+                if (fileInput.files.length === 0) {
+                    alert('Please upload a file first.');
+                    return;
+                }
+
+                const formData = new FormData();
+                formData.append('file', fileInput.files[0]);
+
+                fetch('/process', {
+                    method: 'POST',
+                    body: formData,
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.error) {
+                            alert(`Error: ${data.error}`);
+                        } else {
+                            extractedTextArea.value = data.text; // Populate the extracted text
+                            reviewSection.classList.remove('hidden'); // Show the review section
+                            imagePath = data.imagePath; // Store the image path for finalization
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('An error occurred while extracting text.');
+                    });
+            });
+
+            // Download Button Logic
+            downloadButton.addEventListener('click', function () {
+                const correctedText = extractedTextArea.value;
+                const fileType = fileTypeSelector.value;
+
+                if (!imagePath) {
+                    alert('Image path is missing. Please extract text first.');
+                    return;
+                }
+
+                fetch('/finalize', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ correctedText, fileType, imagePath }),
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.downloadUrl) {
+                            window.location.href = data.downloadUrl; // Trigger download
+                        } else {
+                            alert(data.error || 'An error occurred.');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('Failed to generate the output file.');
+                    });
+            });
+        });
+    </script>
+</body>
+</html>
